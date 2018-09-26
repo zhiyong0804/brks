@@ -26,7 +26,7 @@ using namespace ::apache::thrift::server;
 
 using namespace  ::brkservice;
 
-#define check_delete(ptr) while(0){ if (ptr) delete ptr; }
+#define check_delete(ptr) do { if (ptr) delete ptr; } while(0)
 
 class BRKServiceHandler : virtual public BRKServiceIf {
 public:
