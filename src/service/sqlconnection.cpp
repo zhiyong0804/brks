@@ -18,7 +18,6 @@ MysqlConnection::~MysqlConnection()
         free (mysql_);
         mysql_ = NULL;
     }
-    return;
 }
 
 bool MysqlConnection::Init(const char* szHost, int nPort, const char* szUser, const char* szPasswd, const char* szDb)
@@ -44,9 +43,9 @@ bool MysqlConnection::Init(const char* szHost, int nPort, const char* szUser, co
 #endif
 
     if (mysql_real_connect(mysql_, szHost, szUser, szPasswd, szDb, nPort, NULL, 0) == NULL)
-    {
+    {			
         LOG_ERROR("connect mysql failed %s", this->GetErrInfo());
-	return false;
+		return false;
     }
 
     char cAuto = 1;
@@ -57,6 +56,79 @@ bool MysqlConnection::Init(const char* szHost, int nPort, const char* szUser, co
 
     return true;
 }
+
+
+//初始化数据库表
+bool MysqlConnection::tables_init()
+{
+	const char * select_table_accountrecords = "select * from accountrecords";
+	const char * select_table_bikeinfo = "select * from bikeinfo";
+	const char * select_table_travelinfo = "select * from travelinfo";
+	const char * select_table_userinfo = "select * from userinfo";
+
+	//accountrecords
+	if(mysql_real_query(mysql_, select_table_accountrecords,strlen(select_table_accountrecords)) != 0)
+	{
+		int ret = mysql_real_query(mysql_,this->table_accountrecords,strlen(this->table_accountrecords));
+		if(ret != 0) 
+		{
+			LOG_ERROR("创建表 accountrecords 失败!");
+			return false;
+		}
+		else 
+		{
+			LOG_DEBUG("创建表 accountrecords 成功!");
+		}
+	}
+
+	//bikeinfo
+	if( mysql_real_query(mysql_, select_table_bikeinfo,strlen(select_table_bikeinfo)) != 0)
+	{
+		int ret = mysql_real_query(mysql_,  this->table_bikeinfo ,strlen(this->table_bikeinfo));
+		if(ret != 0) 
+		{
+			LOG_ERROR("创建表 bikeinfo 失败!");
+			return false;
+		}
+		else 
+		{
+			LOG_DEBUG("创建表 bikeinfo 成功!");
+		}
+	}
+
+	//travelinfo
+	if(mysql_real_query(mysql_, select_table_travelinfo ,strlen(select_table_travelinfo)) != 0)
+	{
+		int ret = mysql_real_query(mysql_,this->table_travelinfo,strlen(this->table_travelinfo));
+		if(ret != 0) 
+		{
+			LOG_ERROR("创建表 travelinfo 失败!");
+			return false;
+		}
+		else 
+		{
+			LOG_DEBUG("创建表 travelinfo 成功!");
+		}
+	}
+
+	//userinfo
+	if(mysql_real_query(mysql_, select_table_userinfo,strlen(select_table_userinfo)) != 0)
+	{
+		int ret = mysql_real_query(mysql_,this->table_bikeinfo,strlen(this->table_userinfo));
+		if(ret != 0) 
+		{
+			LOG_ERROR("创建表 userinfo 失败!");
+			return false;
+		}
+		else 
+		{
+			LOG_DEBUG("创建表 userinfo 成功!");
+		}
+	}
+
+	return true;
+}
+
 
 bool MysqlConnection::Execute(const char* szSql)
 {
