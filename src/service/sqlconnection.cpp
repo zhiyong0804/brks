@@ -72,7 +72,7 @@ bool MysqlConnection::tables_init()
 		int ret = mysql_real_query(mysql_,this->table_accountrecords,strlen(this->table_accountrecords));
 		if(ret != 0) 
 		{
-			LOG_ERROR("创建表 accountrecords 失败!");
+			LOG_DEBUG("创建表 accountrecords 失败, accountrecords已创建好!");
 			return false;
 		}
 		else 
@@ -87,7 +87,7 @@ bool MysqlConnection::tables_init()
 		int ret = mysql_real_query(mysql_,  this->table_bikeinfo ,strlen(this->table_bikeinfo));
 		if(ret != 0) 
 		{
-			LOG_ERROR("创建表 bikeinfo 失败!");
+			LOG_DEBUG("创建表 bikeinfo 失败, bikeinfo 已存在!");
 			return false;
 		}
 		else 
@@ -102,7 +102,7 @@ bool MysqlConnection::tables_init()
 		int ret = mysql_real_query(mysql_,this->table_travelinfo,strlen(this->table_travelinfo));
 		if(ret != 0) 
 		{
-			LOG_ERROR("创建表 travelinfo 失败!");
+			LOG_DEBUG("创建表 travelinfo 失败,travelinfo 已存在!");
 			return false;
 		}
 		else 
@@ -117,7 +117,7 @@ bool MysqlConnection::tables_init()
 		int ret = mysql_real_query(mysql_,this->table_bikeinfo,strlen(this->table_userinfo));
 		if(ret != 0) 
 		{
-			LOG_ERROR("创建表 userinfo 失败!");
+			LOG_DEBUG("创建表 userinfo 失败, userinfo 已存在!");
 			return false;
 		}
 		else 
