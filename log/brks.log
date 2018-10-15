@@ -1,0 +1,10 @@
+10-09 20:58:57 053 [139799804050304][INFO]enter Init 
+
+10-09 20:58:57 295 [139799804050304][ERROR]创建表 bikeinfo 失败!
+10-09 20:58:57 295 [139799804050304][ERROR]create table userinfo table failed. error msg:Commands out of sync; you can't run this command now
+10-09 20:58:57 295 [139799804050304][ERROR]create table bikeinfo table failed. error msg:Commands out of sync; you can't run this command now
+10-09 20:58:57 295 [139799804050304][ERROR]create table account records table failed. error msg:Commands out of sync; you can't run this command now
+10-09 20:58:57 295 [139799804050304][ERROR]create table arenainfo failed. error msg:Commands out of sync; you can't run this command now
+10-09 20:58:57 295 [139799804050304][INFO]INTF : try to started thrift service on 9090 port.
+10-09 20:58:57 299 [139799804050304][INFO]INTF : started thrift service on 9090 port.
+10-09 20:58:57 299 [139799804050304][INFO]brks start successful!

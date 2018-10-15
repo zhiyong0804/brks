@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcommon.a  CMakeFiles/common.dir/Logger.cpp.o CMakeFiles/common.dir/event.cpp.o CMakeFiles/common.dir/events_def.cpp.o
+/usr/bin/ranlib libcommon.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libintf.a  CMakeFiles/intf.dir/BRKService.cpp.o CMakeFiles/intf.dir/interface.cpp.o CMakeFiles/intf.dir/interface_constants.cpp.o CMakeFiles/intf.dir/interface_types.cpp.o CMakeFiles/intf.dir/struct_constants.cpp.o CMakeFiles/intf.dir/struct_types.cpp.o
+/usr/bin/ranlib libintf.a

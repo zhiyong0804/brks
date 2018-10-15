@@ -29,8 +29,13 @@ int main(int argc, char** argv)
     dms->open();
     
     std::shared_ptr<MysqlConnection> mysqlconn(new MysqlConnection);
-    mysqlconn->Init("127.0.0.1", 3306, "root", "123456", "dongnaobike");
-    
+    mysqlconn->Init("127.0.0.1", 3306, "root", "850222", "dongnaobike");
+    bool isok = mysqlconn->tables_init();
+	if(isok != false) 
+	{
+		LOG_ERROR("初始化数据库表失败!");
+	}
+	 
     BusinessProcessor processor(dms, mysqlconn);
     processor.init();
 

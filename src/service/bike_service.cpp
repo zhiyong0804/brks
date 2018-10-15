@@ -37,6 +37,7 @@ BikeService::BikeService(std::shared_ptr<MysqlConnection> sql_conn) : sql_conn_(
 
 }
 
+//插入单车
 bool BikeService::insert(const Bike& bk)//int devno, bike_type type, bike_status st)
 {
     char sql_content[1024] = {0};
@@ -47,6 +48,7 @@ bool BikeService::insert(const Bike& bk)//int devno, bike_type type, bike_status
     return sql_conn_->Execute(sql_content);
 }
 
+//报销车辆
 bool BikeService::remove(int devno)
 {
     char sql_content[1024] = {0};
@@ -56,6 +58,7 @@ bool BikeService::remove(int devno)
 
     return sql_conn_->Execute(sql_content);
 }
+
 
 bool BikeService::get_bike(int devno, Bike& bk) //, const std::string& mobile, bike_status& st)
 {

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libservice.a  CMakeFiles/service.dir/DispatchMsgService.cpp.o CMakeFiles/service.dir/MsgQueue.cpp.o CMakeFiles/service.dir/bike_service.cpp.o CMakeFiles/service.dir/sqlconnection.cpp.o CMakeFiles/service.dir/user_service.cpp.o
+/usr/bin/ranlib libservice.a

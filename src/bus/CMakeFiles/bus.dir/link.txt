@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbus.a  CMakeFiles/bus.dir/BusProcessor.cpp.o CMakeFiles/bus.dir/runer_bike_handler.cpp.o CMakeFiles/bus.dir/user_event_handler.cpp.o
+/usr/bin/ranlib libbus.a
