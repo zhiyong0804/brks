@@ -18,6 +18,7 @@ LINK_DIRECTORIES(../third/lib/jsoncpp)
 LINK_DIRECTORIES(../third/lib/tinyxml)
 LINK_DIRECTORIES(../third/lib/log4cpp)
 LINK_DIRECTORIES(../third/lib/thrift)
+LINK_DIRECTORIES(../third/lib/iniparser)
 LINK_DIRECTORIES(./common)
 LINK_DIRECTORIES(./bus)
 LINK_DIRECTORIES(./intf)
@@ -32,7 +33,7 @@ ADD_EXECUTABLE(brks ${SOURCE_FILES})
 
 
 #for backtrace_symbols
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic -Wall -m64 -pipe -std=c++0x -lrt -Wno-reorder -Wdeprecated-declarations -fpermissive")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic -Wall -g3 -m64 -pipe -std=c++0x -lrt -Wno-reorder -Wdeprecated-declarations -fpermissive")
 
 TARGET_LINK_LIBRARIES(brks log4cpp)
 TARGET_LINK_LIBRARIES(brks thrift)
@@ -43,6 +44,7 @@ TARGET_LINK_LIBRARIES(brks libtinyxml.a)
 TARGET_LINK_LIBRARIES(brks pthread)
 TARGET_LINK_LIBRARIES(brks mysqlclient)
 TARGET_LINK_LIBRARIES(brks curl)
+TARGET_LINK_LIBRARIES(brks iniparser)
 TARGET_LINK_LIBRARIES(brks dl)
 
 TARGET_LINK_LIBRARIES(brks bus)
