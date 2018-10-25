@@ -8,6 +8,8 @@
 #include "configdef.h"
 
 #include <functional>
+#include <sys/types.h>
+#include <unistd.h>
 
 
 int main(int argc, char** argv)
@@ -50,10 +52,38 @@ int main(int argc, char** argv)
 
     std::function< iEvent* (const iEvent*)> fun = std::bind(&DispatchMsgService::process, dms.get(), std::placeholders::_1);
 
+    // create server socket and set to non block
     Interface intf(fun);
-    intf.start(conf_args.svr_port);
+    int server_socket = intf.create_and_bind_socket(conf_args.svr_port);
+    intf.set_socket_non_block(server_socket);
 
-    LOG_INFO("brks start successful!");
+    //fork multi process
+    pid_t processid = 0;
+    for(int i = 0; i < 4; i++)
+    {
+        processid = 0;
+        processid = fork();
+        if(processid < 0)
+        {
+            LOG_ERROR("fork child task failed.");
+            break;
+        }
+        else if (processid == 0)  // this is child task
+        {
+            break;
+        }
+    }
+
+    if (processid > 0) // this is parent process
+    {
+        LOG_INFO("parent id is %d", getpid());
+        LOG_INFO("brks start successful!");
+    }
+    else if (processid == 0)
+    {
+        LOG_INFO("this is child process pid=%d", getpid());
+        intf.start(server_socket);
+    }
 
     for(;;);
 
