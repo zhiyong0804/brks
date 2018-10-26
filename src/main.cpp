@@ -25,7 +25,7 @@ int optind = 1;
 int opterr = 1;
 int optopt;
 
-int brks_fprintf(FILE *file, const char *fmt,  ...)
+static int brks_fprintf(FILE *file, const char *fmt,  ...)
 {
     if (file == NULL)
         return -1;
@@ -194,13 +194,14 @@ int main(int argc, char** argv)
     bool run_in_foreground = false;
     std::string log_file_path = "";
     std::string config_file_path = "";
-    while ((ch = getopt(argc,argv, "vlcd")) != EOF)
+    while ((ch = getopt(argc,argv, "vdl:c:")) != EOF)
     {
         switch(ch)
         {
             case 'v':
                 usage();
                 ::exit(0);
+                break;
             case 'd':
                 run_in_foreground = true;
                 break;
@@ -217,24 +218,28 @@ int main(int argc, char** argv)
         }
     }
 
-    if (!run_in_foreground)
-    {
-        daemon(0, 0);
-    }
-
     if(!Logger::instance()->init(log_file_path))
     {
-        printf("init log module failed.\n");
+        printf("init log module with file path = %s failed.\n", log_file_path.c_str());
         return -2;
     }
 
     Iniconfig config;
     if (!config.loadfile(config_file_path))
     {
-        LOG_ERROR("load %s failed.", argv[2]);
+        LOG_ERROR("load %s failed.", config_file_path.c_str());
         return -3;
     }
     st_env_config conf_args = config.getconfig();
+
+    if (!run_in_foreground)
+    {
+        if (0 != daemon(0, 0))
+        {
+            LOG_ERROR("run in daemon failed with error %s", strerror(errno));
+            exit(-1);
+        }
+    }
 
     std::shared_ptr<DispatchMsgService> dms(new DispatchMsgService);
     dms->open();
