@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define OPTERRCOLON (1)
 #define OPTERRNF (2)
@@ -281,14 +283,45 @@ int main(int argc, char** argv)
         LOG_INFO("parent id is %d", getpid());
         LOG_INFO("brks start successful!");
 
-        int wstatus = 0;
-        //pid_t pid = wait(wstatus);
+        // if child process exit with -1 then exit parent process.
+        // if child process exit with not -1 then restart child process
+        int status = 0;
+        while (status == 0)
+        {
+            pid_t pid = wait(&status);  // parent process block here.
+            int exitStatus = WEXITSTATUS(status);
+            LOG_INFO("parent process wait return with: pid=%d, status=%d, exitStatus=%d.", pid, status, exitStatus);
 
+            if ((WIFEXITED(status) != 0) && (pid > 0))
+            {
+                if (exitStatus == -1)
+                {
+                    LOG_ERROR("child process %d cannot normal start so parent should be exit too.", pid);
+                    exit(-1);
+                }
+                else
+                {
+                    processid = fork();  // restart an child process.
+                    if (processid == 0) break;  // break while.
+                }
+            }
+
+            if (WIFSIGNALED(status)) // child exited on an unhandled signal (maybe a bus error or seg fault)
+			{
+				processid = fork();  // restart an child process.
+                if (processid == 0) break;  // break while.
+			}
+        }
     }
-    else if (processid == 0)
+
+    if (processid == 0)
     {
         LOG_INFO("this is child process pid=%d", getpid());
-        intf.start(server_socket);
+        if (!intf.start(server_socket))
+        {
+            LOG_ERROR("cannot start child process!");
+            exit(-1); // if cannot start child process donnot restart server.
+        }
         LOG_ERROR("child process exit");
     }
 
