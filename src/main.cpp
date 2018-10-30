@@ -377,7 +377,6 @@ int main(int argc, char** argv)
     act2.sa_flags = 0;
     sigaction(SIGQUIT, &act2, NULL);
 
-
     pid_t processid = 0;
     for(int i = 0; i < childNum; i++)
     {
@@ -414,7 +413,7 @@ int main(int argc, char** argv)
             while( childNum <= 0 )
             {        
                 processid = fork();
-                if(process``id < 0)
+                if( processid < 0 )
                 {
                     LOG_ERROR("fork child task failed.");
                     break;
