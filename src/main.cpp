@@ -397,6 +397,7 @@ int main(int argc, char** argv)
         else
         {
             listPid.push_back(processid);
+            --childNum;
         }
     }
 
@@ -410,7 +411,7 @@ int main(int argc, char** argv)
 
         while(isExit)
         {
-            while( childNum <= 0 )
+            if( childNum > 0 )
             {        
                 processid = fork();
                 if( processid < 0 )
