@@ -19,7 +19,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-
 #define OPTERRCOLON (1)
 #define OPTERRNF (2)
 #define OPTERRARG (3)
@@ -29,6 +28,7 @@ int optreset = 0;
 int optind = 1;
 int opterr = 1;
 int optopt;
+
 
 static int childNum = 4;
 static bool isExit = true;
@@ -77,8 +77,8 @@ static int getopt(int argc, char* const *argv, const char *optstr)
     static int optchr = 0;
     static int dash = 0; /* have already seen the - */
 
-    char *cp;
-
+    char *cp = NULL;
+  
     if (optreset)
         optreset = optchr = dash = 0;
     if(optind >= argc)
@@ -164,7 +164,6 @@ static int daemon(int nochdir, int noclose)
         break;
     default:
         _exit(0);
-    }
 
     if (setsid() == -1)
         return (-1);
@@ -270,7 +269,6 @@ void SIGQUIT_childExit(int signo)
 }
 
 
-
 int main(int argc, char** argv)
 {
     if (argc <= 1)
@@ -286,23 +284,23 @@ int main(int argc, char** argv)
     {
         switch(ch)
         {
-        case 'v':
-            usage();
-            ::exit(0);
-            break;
-        case 'd':
-            run_in_foreground = true;
-            break;
-        case 'l':
-            assert(optarg != NULL);// this means we didn't declare getopt options correctly or there is a bug in getopt.
-            log_file_path = std::string(optarg);
-            break;
-        case 'c':
-            assert(optarg != NULL);// this means we didn't declare getopt options correctly or there is a bug in getopt.
-            config_file_path= std::string(optarg);
-            break;
-        default:
-            break;
+            case 'v':
+                usage();
+                ::exit(0);
+                break;
+            case 'd':
+                run_in_foreground = true;
+                break;
+            case 'l':
+                assert(optarg != NULL);// this means we didn't declare getopt options correctly or there is a bug in getopt.
+                log_file_path = std::string(optarg);
+                break;
+            case 'c':
+                assert(optarg != NULL);// this means we didn't declare getopt options correctly or there is a bug in getopt.
+                config_file_path= std::string(optarg);
+                break;
+            default:
+                break;
         }
     }
 
@@ -389,7 +387,6 @@ int main(int argc, char** argv)
         }
         else if (processid == 0)  // this is child task
         {
-
             //解除对SIGCHLD SIGUSR1 SIGQUTI 信号的阻塞
             sigprocmask(SIG_UNBLOCK, &mask, NULL);            
             break;

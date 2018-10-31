@@ -9,6 +9,9 @@ log4cpp thrift tinyxml jsoncpp mysqlclient curl libevent lua
 最后该工程是使用cmake编译的，所以请大家安装cmake工具，当然你不要在windows上安装cmake，因为我们的工程全都是在linux下编译和部署的。
 
 编译的命令:
-cd src
-cmake .
+cd src   
+cmake .  
 make
+
+**multiprocess**
+对于multiprocess分支来说，可以通过brks -v获取运行使用方法。  
