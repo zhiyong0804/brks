@@ -13,9 +13,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <list>
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define OPTERRCOLON (1)
 #define OPTERRNF (2)
@@ -26,6 +28,11 @@ int optreset = 0;
 int optind = 1;
 int opterr = 1;
 int optopt;
+
+
+static int childNum = 4;
+static bool isExit = true;
+static std::list<pid_t> listPid;
 
 static int brks_fprintf(FILE *file, const char *fmt,  ...)
 {
@@ -70,8 +77,8 @@ static int getopt(int argc, char* const *argv, const char *optstr)
     static int optchr = 0;
     static int dash = 0; /* have already seen the - */
 
-    char *cp;
-
+    char *cp = NULL;
+  
     if (optreset)
         optreset = optchr = dash = 0;
     if(optind >= argc)
@@ -151,13 +158,12 @@ static int daemon(int nochdir, int noclose)
 
     switch (fork())
     {
-        case -1:
-            return (-1);
-        case 0:
-            break;
-        default:
-            _exit(0);
-    }
+    case -1:
+        return (-1);
+    case 0:
+        break;
+    default:
+        _exit(0);
 
     if (setsid() == -1)
         return (-1);
@@ -184,6 +190,84 @@ static void usage()
     printf("-c brks.ini: Specify a config file\n");
     printf("-l log.conf: Specify a log config file\n");
 }
+
+void waitChild(int signo)
+{
+    LOG_INFO("signo==[%d]\n", signo);
+
+    pid_t wpid;
+    int status; 
+
+    while(1)
+    {
+        wpid = waitpid(-1, &status, WNOHANG);
+        int exitStatus = WEXITSTATUS(status);
+
+        if( (wpid > 0) && (WIFEXITED(status) != 0) ) //有子进程退出
+        {
+            LOG_ERROR("child exit, wpid==[%d]\n", wpid);
+            if (exitStatus == -1) 
+            {
+                LOG_ERROR("child process %d cannot normal start so parent should be exit too.", pid);
+                exit(-1);
+            }
+            else
+            {
+                if( WTERMSIG(status) == SIGQUIT )
+                {
+                    continue;
+                }
+                else 
+                {
+                    listPid.remove(wpid);
+                    ++childNum;
+                }
+            }
+            if ( WIFSIGNALED(status) ) // child exited on an unhandled signal (maybe a bus error or seg fault)
+            {
+                LOG_ERROR( "child exited on an unhandled signal: %d ",WTERMSIG(status) );
+                if( WTERMSIG(status) == SIGQUIT )
+                {
+                    continue;
+                }
+                else 
+                {
+                    listPid.remove(wpid);
+                    ++childNum;
+                }   
+            }
+        }
+        else if(wpid==-1) //子进程全部退出了
+        {
+            LOG_INFO("no child is living, wpid==[%d]\n", wpid);
+            break;
+        }
+        else if(wpid==0) //子进程还存活着
+        {
+            LOG_INFO("child is living, wpid==[%d]\n", wpid);
+            break;
+        }
+    }
+}
+
+void SIGUSR1_ProgramExit(int signo) 
+{
+
+    std::list<pid_t>::iterator iter;
+    for(iter = listPid.begin(); iter !=listPid.end(); ++iter)
+    {
+        kill(*iter,SIGQUIT);
+    }
+
+    isExit = false; 
+}
+
+void SIGQUIT_childExit(int signo)
+{
+    LOG_INFO("I'll be back!");
+    isExit = false;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -249,7 +333,7 @@ int main(int argc, char** argv)
     std::shared_ptr<MysqlConnection> mysqlconn(new MysqlConnection);
     //mysqlconn->Init("127.0.0.1", 3306, "root", "123456", "dongnaobike");
     mysqlconn->Init(conf_args.db_ip.c_str(), conf_args.db_port, \
-        conf_args.db_user.c_str(), conf_args.db_pwd.c_str(), conf_args.db_name.c_str());
+            conf_args.db_user.c_str(), conf_args.db_pwd.c_str(), conf_args.db_name.c_str());
 
     BusinessProcessor processor(dms, mysqlconn);
     processor.init();
@@ -262,8 +346,37 @@ int main(int argc, char** argv)
     intf.set_socket_non_block(server_socket);
 
     //fork multi process
+    //阻塞SIGCHLD SIGUSR1 信号
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigaddset(&mask, SIGUSR1);
+    sigaddset(&mask, SIGQUIT);
+    sigprocmask(SIG_BLOCK, &mask, NULL);
+
+    //注册SIGCHLD信号的处理函数
+    struct sigaction act;
+    act.sa_handler= waitChild;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    sigaction(SIGCHLD, &act, NULL);
+
+    //注册SIGUSR1回调函数
+    struct sigaction act1;
+    act1.sa_handler = SIGUSR1_ProgramExit;
+    sigemptyset(&act1.sa_mask);
+    act1.sa_flags = 0;
+    sigaction(SIGUSR1, &act1, NULL);
+
+    //注册SIGQUIT回调函数
+    struct sigaction act2;
+    act2.sa_handler = SIGQUIT_childExit;
+    sigemptyset(&act2.sa_mask);
+    act2.sa_flags = 0;
+    sigaction(SIGQUIT, &act2, NULL);
+
     pid_t processid = 0;
-    for(int i = 0; i < 4; i++)
+    for(int i = 0; i < childNum; i++)
     {
         processid = 0;
         processid = fork();
@@ -274,43 +387,45 @@ int main(int argc, char** argv)
         }
         else if (processid == 0)  // this is child task
         {
+            //解除对SIGCHLD SIGUSR1 SIGQUTI 信号的阻塞
+            sigprocmask(SIG_UNBLOCK, &mask, NULL);            
             break;
+        }
+        else
+        {
+            listPid.push_back(processid);
+            --childNum;
         }
     }
 
     if (processid > 0) // this is parent process
     {
+        //解除对SIGCHLD SIGUSR1 SIGQUTI  信号的阻塞
+        sigprocmask(SIG_UNBLOCK, &mask, NULL);
+
         LOG_INFO("parent id is %d", getpid());
         LOG_INFO("brks start successful!");
 
-        // if child process exit with -1 then exit parent process.
-        // if child process exit with not -1 then restart child process
-        int status = 0;
-        while (status == 0)
+        while(isExit)
         {
-            pid_t pid = wait(&status);  // parent process block here.
-            int exitStatus = WEXITSTATUS(status);
-            LOG_INFO("parent process wait return with: pid=%d, status=%d, exitStatus=%d.", pid, status, exitStatus);
-
-            if ((WIFEXITED(status) != 0) && (pid > 0))
-            {
-                if (exitStatus == -1)
+            if( childNum > 0 )
+            {        
+                processid = fork();
+                if( processid < 0 )
                 {
-                    LOG_ERROR("child process %d cannot normal start so parent should be exit too.", pid);
-                    exit(-1);
+                    LOG_ERROR("fork child task failed.");
+                    break;
                 }
-                else
+                else if (processid == 0)  // this is child task
                 {
-                    processid = fork();  // restart an child process.
-                    if (processid == 0) break;  // break while.
+                    break;
+                }
+                else 
+                {
+                    listPid.push_back(processid);
+                    --childNum;
                 }
             }
-
-            if (WIFSIGNALED(status)) // child exited on an unhandled signal (maybe a bus error or seg fault)
-			{
-				processid = fork();  // restart an child process.
-                if (processid == 0) break;  // break while.
-			}
         }
     }
 
@@ -325,7 +440,7 @@ int main(int argc, char** argv)
         LOG_ERROR("child process exit");
     }
 
-    for(;;);
+    while(isExit);
 
     return 0;
 }
