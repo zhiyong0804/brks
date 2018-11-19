@@ -17,20 +17,32 @@ enum EErrorCode
 enum EventID
 {
     EEVENTID_COMMON_RSP                    = 0x00,
-    EEVENTID_GET_MOBILE_CODE_REQ           = 0x01,
-    EEVENTID_LOGIN_REQ                     = 0x02,
-    EEVENTID_RECHARGE_REQ                  = 0x03,
-    EEVENTID_GET_ACCOUNT_BALANCE_REQ       = 0x04,
-    EEVENTID_BALANCE_RSP                   = 0x05,
-    EEVENTID_LIST_ACCOUNT_RECORDS_REQ      = 0x06,
-    EEVENTID_ACCOUNT_RECORDS_RSP           = 0x07,
-    EEVENTID_UNLOCK_REQ                    = 0x08,
-    EEVENTID_LIST_TRAVELS_REQ              = 0x09,
-    EEVENTID_LIST_TRAVELS_RSP              = 0x10,
-	EEVENTID_LOCK_REQ                          = 0x11,
-	EEVENTID_LOCK_RSP                      = 0x12,
 
-	EEVENTID_UNKOWN                        = 0xFF
+    EEVENTID_GET_MOBILE_CODE_REQ           = 0x01,
+    EEVENTID_GET_MOBILE_CODE_RSP           = 0x02,
+
+    EEVENTID_LOGIN_REQ                     = 0x03,
+    EEVENTID_LOGIN_RSP                     = 0x04,
+
+    EEVENTID_RECHARGE_REQ                  = 0x05,
+    EEVENTID_RECHARGE_RSP                  = 0x06,
+
+    EEVENTID_GET_ACCOUNT_BALANCE_REQ       = 0x07,
+    EEVENTID_GET_ACCOUNT_BALANCE_RSP       = 0x08,
+
+    EEVENTID_LIST_ACCOUNT_RECORDS_REQ      = 0x09,
+    EEVENTID_LIST_ACCOUNT_RECORDS_RSP      = 0x10,
+
+    EEVENTID_UNLOCK_REQ                    = 0x11,
+    EEVENTID_UNLOCK_RSP                    = 0x12,
+
+    EEVENTID_LIST_TRAVELS_REQ              = 0x13,
+    EEVENTID_LIST_TRAVELS_RSP              = 0x14,
+
+	EEVENTID_LOCK_REQ                      = 0x15,
+	EEVENTID_LOCK_RSP                      = 0x16,
+
+	EEVENTID_UNKOWN                        = 0xFFFF
 };
 
 

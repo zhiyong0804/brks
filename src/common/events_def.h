@@ -89,7 +89,7 @@ public :
     GetAccountBalanceRspEv(i32 code, const std::string& msg, const std::string& data, i32 balance) :
         CommonRspEv(code, msg, data), balance_(balance)
     {
-        set_eid(EEVENTID_BALANCE_RSP);
+        set_eid(EEVENTID_GET_ACCOUNT_BALANCE_RSP);
     };
 
     i32& get_balance(){return balance_;};
@@ -261,7 +261,7 @@ public:
     ListAccountRecordsRspEv(i32 code, const std::string& msg, const std::string& data, const std::vector<AccountRecord>& records) :
         CommonRspEv(code, msg, data), records_(records)
 	{
-        set_eid(EEVENTID_ACCOUNT_RECORDS_RSP);
+        set_eid(EEVENTID_LIST_ACCOUNT_RECORDS_RSP);
     };
 
     const std::vector<AccountRecord>& get_records(){ return records_;};
