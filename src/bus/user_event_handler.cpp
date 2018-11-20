@@ -66,15 +66,15 @@ iEvent* UserEventHandler::handle(const iEvent* ev)
     }
     else if (eid == EEVENTID_LOGIN_REQ)
     {
-        return handle_login_req((LoginEv*) ev);
+        return handle_login_req((LoginReqEv*) ev);
     }
     else if (eid == EEVENTID_RECHARGE_REQ)
     {
-        return handle_recharge_req((RechargeEv*) ev);
+        return handle_recharge_req((RechargeReqEv*) ev);
     }
     else if (eid == EEVENTID_GET_ACCOUNT_BALANCE_REQ)
     {
-        return handle_get_account_balance_req((GetAccountBalanceEv*) ev);
+        return handle_get_account_balance_req((GetAccountBalanceReqEv*) ev);
     }
     else if (eid == EEVENTID_LIST_ACCOUNT_RECORDS_REQ)
     {
@@ -98,7 +98,7 @@ ListAccountRecordsRspEv* UserEventHandler::handle_list_account_records_req(ListA
     return new ListAccountRecordsRspEv(ERRC_SUCCESS, "success", "", records);
 }
 
-CommonRspEv* UserEventHandler::handle_recharge_req(RechargeEv* ev)
+CommonRspEv* UserEventHandler::handle_recharge_req(RechargeReqEv* ev)
 {
     std::stringstream ss;
     ev->dump(ss);
@@ -159,7 +159,7 @@ std::string UserEventHandler::code_gen()
     return std::string(buffer);
 }
 
-CommonRspEv* UserEventHandler::handle_login_req(LoginEv* ev)
+CommonRspEv* UserEventHandler::handle_login_req(LoginReqEv* ev)
 {
     std::string mobile = ev->get_mobile();
     std::string code = ev->get_code();
@@ -186,7 +186,7 @@ CommonRspEv* UserEventHandler::handle_login_req(LoginEv* ev)
     return new CommonRspEv(200, "success", "");
 }
 
-GetAccountBalanceRspEv* UserEventHandler::handle_get_account_balance_req(GetAccountBalanceEv* ev)
+GetAccountBalanceRspEv* UserEventHandler::handle_get_account_balance_req(GetAccountBalanceReqEv* ev)
 {
     int balance = 0;
     UserService us(sqlconn_);

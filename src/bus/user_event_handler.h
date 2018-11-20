@@ -23,9 +23,9 @@ public:
     static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 private:
     CommonRspEv* handle_mobile_code_req(MobileCodeReqEv* ev);
-    CommonRspEv* handle_login_req(LoginEv* ev);
-    CommonRspEv* handle_recharge_req(RechargeEv* ev);
-    GetAccountBalanceRspEv* handle_get_account_balance_req(GetAccountBalanceEv* ev);
+    CommonRspEv* handle_login_req(LoginReqEv* ev);
+    CommonRspEv* handle_recharge_req(RechargeReqEv* ev);
+    GetAccountBalanceRspEv* handle_get_account_balance_req(GetAccountBalanceReqEv* ev);
     ListAccountRecordsRspEv* handle_list_account_records_req(ListAccountRecordsReqEv* ev);
 
     /* 短信相关 */

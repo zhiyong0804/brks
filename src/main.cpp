@@ -314,11 +314,12 @@ int main(int argc, char** argv)
     if (processid == 0)
     {
         LOG_INFO("this is child process pid=%d", getpid());
-        if (!intf.start(server_socket))
+        if (!intf.add_server_socket(server_socket))
         {
             LOG_ERROR("cannot start child process!");
             exit(-1); // if cannot start child process donnot restart server.
         }
+        intf.run();
         LOG_ERROR("child process exit");
     }
 

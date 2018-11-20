@@ -13,7 +13,7 @@ class MobileCodeReqEv : public iEvent
 {
 public:
     MobileCodeReqEv(const std::string& mobile) :
-        iEvent(EEVENTID_GET_MOBILE_CODE_REQ, iEvent::generateSeqNo()), mobile_(mobile)
+        iEvent(EEVENTID_GET_MOBILE_CODE_REQ, generateSeqNo()), mobile_(mobile)
     {};
 
     const std::string& get_mobile(){return mobile_;};
@@ -22,11 +22,11 @@ private:
     std::string mobile_;
 };
 
-class LoginEv : public iEvent
+class LoginReqEv : public iEvent
 {
 public :
-	LoginEv(const std::string& mobile, const std::string& code) :
-        iEvent(EEVENTID_LOGIN_REQ, iEvent::generateSeqNo()), mobile_(mobile), code_(code)
+	LoginReqEv(const std::string& mobile, const std::string& code) :
+        iEvent(EEVENTID_LOGIN_REQ, generateSeqNo()), mobile_(mobile), code_(code)
 	{};
 
     const std::string& get_mobile(){return mobile_;};
@@ -55,10 +55,31 @@ private:
     std::string   data_;  //辅助数据
 };
 
-class RechargeEv : public iEvent
+class MobileCodeRspEv : public CommonRspEv
+{
+public:
+	MobileCodeRspEv(i32 code, const std::string& msg, const std::string& data) :
+		CommonRspEv(code, msg, data)
+	{
+        set_eid(EEVENTID_GET_MOBILE_CODE_RSP);
+	};
+};
+
+class LoginRspEv : public CommonRspEv
+{
+public:
+	LoginRspEv(i32 code, const std::string& msg, const std::string& data) :
+		CommonRspEv(code, msg, data)
+	{
+		set_eid(EEVENTID_LOGIN_RSP);
+	};
+};
+
+
+class RechargeReqEv : public iEvent
 {
 public :
-	RechargeEv(const std::string& mobile, i32 amount) :
+	RechargeReqEv(const std::string& mobile, i32 amount) :
         iEvent(EEVENTID_RECHARGE_REQ, generateSeqNo()), mobile_(mobile), amount_(amount)
 	{};
 
@@ -70,10 +91,20 @@ private :
     i32 amount_;
 };
 
-class GetAccountBalanceEv : public iEvent
+class RechargeRspEv : public CommonRspEv
+{
+public:
+	RechargeRspEv(i32 code, const std::string& msg, const std::string& data) :
+		CommonRspEv(code, msg, data)
+	{
+		set_eid(EEVENTID_RECHARGE_RSP);
+	};
+};
+
+class GetAccountBalanceReqEv : public iEvent
 {
 public :
-	GetAccountBalanceEv(const std::string& mobile) :
+	GetAccountBalanceReqEv(const std::string& mobile) :
         iEvent(EEVENTID_GET_ACCOUNT_BALANCE_REQ, generateSeqNo()), mobile_(mobile)
 	{};
 
@@ -98,10 +129,10 @@ private :
     i32 balance_;
 };
 
-class UnlockEv : public iEvent
+class UnlockReqEv : public iEvent
 {
 public :
-	UnlockEv(const std::string& mobile, const std::string& bike_code) :
+	UnlockReqEv(const std::string& mobile, const std::string& bike_code) :
         iEvent(EEVENTID_UNLOCK_REQ, generateSeqNo()), mobile_(mobile), bike_code_(bike_code)
 	{};
 
@@ -113,10 +144,20 @@ private :
     std::string bike_code_;
 };
 
-class LockEv : public iEvent
+class UnlockRspEv : public CommonRspEv
+{
+public:
+	UnlockRspEv(i32 code, const std::string& msg, const std::string& data) :
+		CommonRspEv(code, msg, data)
+	{
+		set_eid(EEVENTID_UNLOCK_RSP);
+	};
+};
+
+class LockReqEv : public iEvent
 {
 public :
-	LockEv(const std::string& mobile, const std::string& bike_code) :
+	LockReqEv(const std::string& mobile, const std::string& bike_code) :
         iEvent(EEVENTID_LOCK_REQ, generateSeqNo()), mobile_(mobile), bike_code_(bike_code)
 	{};
 
@@ -184,10 +225,10 @@ typedef struct TravelInfo
     }
 }TravelInfo_;
 
-class LockResultRspEv : public CommonRspEv
+class LockRspEv : public CommonRspEv
 {
 public :
-	LockResultRspEv(i32 code, const std::string& msg, const std::string& data, const TravelInfo& ti) :
+	LockRspEv(i32 code, const std::string& msg, const std::string& data, const TravelInfo& ti) :
         CommonRspEv(code, msg, data), ti_(ti)
 	{
         set_eid(EEVENTID_LOCK_RSP);

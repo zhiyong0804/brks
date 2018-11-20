@@ -45,7 +45,7 @@ struct protocol_head_t
 #define HEAD_RESERVE_POS    16
 
 
-class message_head_t
+class protocol_head_codec_t
 {
 public:
     virtual bool decode(u8* buffer, u32 size, protocol_head_t* head);

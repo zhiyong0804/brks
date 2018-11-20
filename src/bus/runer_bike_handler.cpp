@@ -30,11 +30,11 @@ iEvent* RunnerEventHandler::handle(const iEvent* ev)
 
     if (eid == EEVENTID_UNLOCK_REQ)
     {
-        return handle_unlock_req((UnlockEv*) ev);
+        return handle_unlock_req((UnlockReqEv*) ev);
     }
     else if (eid == EEVENTID_LOCK_REQ)
     {
-        return handle_lock_req((LockEv*) ev);
+        return handle_lock_req((LockReqEv*) ev);
     }
     else if (eid == EEVENTID_LIST_TRAVELS_REQ)
     {
@@ -44,7 +44,7 @@ iEvent* RunnerEventHandler::handle(const iEvent* ev)
     return NULL;
 }
 
-CommonRspEv* RunnerEventHandler::handle_unlock_req(UnlockEv* ev)
+CommonRspEv* RunnerEventHandler::handle_unlock_req(UnlockReqEv* ev)
 {
     LOG_DEBUG("enter handle_unlock_req");
 
@@ -89,7 +89,7 @@ CommonRspEv* RunnerEventHandler::handle_unlock_req(UnlockEv* ev)
     return new CommonRspEv(200, "success", "");
 }
 
-LockResultRspEv* RunnerEventHandler::handle_lock_req(LockEv* ev)
+LockRspEv* RunnerEventHandler::handle_lock_req(LockReqEv* ev)
 {
     std::string mobile = ev->get_mobile();
     std::string bike_code = ev->get_bike_code();
@@ -118,14 +118,14 @@ LockResultRspEv* RunnerEventHandler::handle_lock_req(LockEv* ev)
 
         if (bk.mobile_.compare(mobile) != 0)
         {
-            return new LockResultRspEv(ERRO_BIKE_IS_TOOK, "annother one take the bike.", "", trave);
+            return new LockRspEv(ERRO_BIKE_IS_TOOK, "annother one take the bike.", "", trave);
         }
         else if (bk.st_ == BIKE_ST_UNLOCK)
         {
             /* Í¬Ê±¶Ô¶à¸ö±í¸ñ²Ù×÷£¬´Ë´¦ÕâÃ´Ð´ÓÐÊ²Ã´ÎÊÌâå ÈçºÎ±£ÕÏÊý¾ÝµÄÒ»ÖÂÐÔ¿ */
             if (!bs.lock(bk))
             {
-                return new LockResultRspEv(ERRO_PROCCESS_FAILED, "failed", "", trave);
+                return new LockRspEv(ERRO_PROCCESS_FAILED, "failed", "", trave);
             }
             else
             {
@@ -135,12 +135,12 @@ LockResultRspEv* RunnerEventHandler::handle_lock_req(LockEv* ev)
             }
         }
 
-        return new LockResultRspEv(ERRC_SUCCESS, "success", "", trave);
+        return new LockRspEv(ERRC_SUCCESS, "success", "", trave);
     }
 
     std::vector<TravelRecord> record;
     TravelInfo trave(0, 0, 0, record);
-    return new LockResultRspEv(ERRC_INVALID_DATA, "cannot find bike", "", trave);
+    return new LockRspEv(ERRC_INVALID_DATA, "cannot find bike", "", trave);
 }
 
 ListTravelRecordsRspEv* RunnerEventHandler::handle_list_travel_records_req(ListTravelRecordsReqEv* ev)

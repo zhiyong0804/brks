@@ -1,12 +1,14 @@
 
 #include "protocol_head.h"
+#include "protocol_codec.h"
+
 
 #include <assert.h>
 #include <string.h>
 #include <arpa/inet.h>
 
 
-bool message_head_t::decode(u8* buffer, u32 size, protocol_head_t* head)
+bool protocol_head_codec_t::decode(u8* buffer, u32 size, protocol_head_t* head)
 {
     assert(buffer != NULL);
     assert(sizeof(head) <= size);
@@ -16,10 +18,13 @@ bool message_head_t::decode(u8* buffer, u32 size, protocol_head_t* head)
     head->type_    = get_byte(buffer, size, HEAD_TYPE_POS);
     head->len_     = get_u16(buffer, size, HEAD_LEN_POS);
     head->msg_id_  = get_u16(buffer, size, HEAD_MID_POS);
+    head->msg_sn   = get_u64(buffer, size, HEAD_MSN_POS);
     head->reserve_ = get_u32(buffer, size, HEAD_RESERVE_POS);
+
+    return true;
 }
 
-bool message_head_t::encode(protocol_head_t* head, u8* buffer, u32 size)
+bool protocol_head_codec_t::encode(protocol_head_t* head, u8* buffer, u32 size)
 {
     assert(buffer != NULL);
     assert(sizeof(head) <= size);
@@ -32,21 +37,21 @@ bool message_head_t::encode(protocol_head_t* head, u8* buffer, u32 size)
     set_u32(buffer, size, HEAD_RESERVE_POS, head->reserve_);
 }
 
-u8 message_head_t::get_byte(u8* buffer, u32 size, u32 offset)
+u8 protocol_head_codec_t::get_byte(u8* buffer, u32 size, u32 offset)
 {
     assert(buffer != NULL);
     assert(offset <= size);
     return buffer + offset;
 }
 
-void message_head_t::set_byte(u8* buffer, u32 size, u32 offset, u8 val)
+void protocol_head_codec_t::set_byte(u8* buffer, u32 size, u32 offset, u8 val)
 {
     assert(buffer != NULL );
     assert(offset + sizeof(u8) <= size);
     buffer[offset] = val;
 }
 
-u16 message_head_t::get_u16(u8* buffer, u32 size, u32 offset)
+u16 protocol_head_codec_t::get_u16(u8* buffer, u32 size, u32 offset)
 {
     assert(buffer != NULL);
     assert(offset + sizeof(u16) <= size);
@@ -55,7 +60,7 @@ u16 message_head_t::get_u16(u8* buffer, u32 size, u32 offset)
     return ntohs(val);
 }
 
-void message_head_t::set_u16(u8* buffer, u32 size, u32 offset, u16 val)
+void protocol_head_codec_t::set_u16(u8* buffer, u32 size, u32 offset, u16 val)
 {
     assert(buffer != NULL);
     assert(offset + sizeof(u16) <= size);
@@ -63,7 +68,7 @@ void message_head_t::set_u16(u8* buffer, u32 size, u32 offset, u16 val)
     memcpy(buffer + offset, &temp, 2);
 }
 
-u32 message_head_t::get_u32(u8* buffer, u32 size, u32 offset)
+u32 protocol_head_codec_t::get_u32(u8* buffer, u32 size, u32 offset)
 {
     assert(buffer != NULL);
     assert(offset + sizeof(u32) <= size);
@@ -72,7 +77,7 @@ u32 message_head_t::get_u32(u8* buffer, u32 size, u32 offset)
     return ntohl(val);
 }
 
-void message_head_t::set_u32(u8* buffer, u32 size, u32 offset, u32 val)
+void protocol_head_codec_t::set_u32(u8* buffer, u32 size, u32 offset, u32 val)
 {
     assert(buffer != NULL);
     assert(offset + sizeof(u32) <= size);
@@ -80,7 +85,7 @@ void message_head_t::set_u32(u8* buffer, u32 size, u32 offset, u32 val)
     memcpy(buffer + offset, &temp, 4);
 }
 
-u64 message_head_t::get_u64(u8* buffer, u32 size, u32 offset)
+u64 protocol_head_codec_t::get_u64(u8* buffer, u32 size, u32 offset)
 {
     assert(buffer != NULL);
     assert(offset + sizeof(u64) <= size);
@@ -90,7 +95,7 @@ u64 message_head_t::get_u64(u8* buffer, u32 size, u32 offset)
     return val;
 }
 
-void message_head_t::set_u64(u8* buffer, u32 size, u32 offset, u64 val)
+void protocol_head_codec_t::set_u64(u8* buffer, u32 size, u32 offset, u64 val)
 {
     assert(buffer != NULL);
     assert(offset + sizeof(u64) <= size);

@@ -19,6 +19,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "protocol_head.h"
+#include "events_def.h"
+#include "protocol_codec.h"
+
+
 
 #define BUF_SIZE   1024
 #define MAX_EVENTS 64
@@ -97,20 +102,92 @@ int Interface::nio_write(int fd, char* buf, int len)
     return len;
 }
 
-
-bool Interface::start(int socket)
+bool Interface::add_epoll_event(int efd, int socket, int events)
 {
-    struct epoll_event events[MAX_EVENTS] = {0};
+    struct epoll_event event;
+
+    event.events  = events;//EPOLLIN | EPOLLOUT | EPOLLET;
+    event.data.fd = socket;
+    int ret = epoll_ctl(efd, EPOLL_CTL_ADD, socket, &event);
+    if (ret == -1)
+    {
+        LOG_ERROR("can not add event to epoll_fd_!\n");
+        return false;
+    }
+
+    return true;
+}
+
+int Interface::nio_recv(int sockfd, char *buffer, int length, int *ret)
+{
+	int idx = 0;
+
+	while (1)
+    {
+		int count = recv(sockfd, buffer+idx, length - idx, 0);
+		if (count == 0)
+        {
+			*ret = -1;
+			::close(sockfd);
+			break;
+		}
+        else if (count == -1)
+		{
+			*ret = 0;
+			break;
+		}
+        else
+        {
+			idx += count;
+			if (idx == length) break;
+		}
+	}
+
+	return idx;
+}
+
+
+bool Interface::accept_client(int efd, int sfd)
+{
+    struct sockaddr client_addr;
+    int addrlen = sizeof(struct sockaddr);
+
+    int client_fd = accept(sfd, &client_addr, &addrlen);
+    if (client_fd == -1)
+    {
+       if (errno == EAGAIN || errno == EWOULDBLOCK)
+       {
+           return true;
+       }
+       else
+       {
+           LOG_ERROR("cannot accept new server_socket!\n");
+           return false;
+       }
+    }
+
+    int ret = set_socket_non_block(client_fd);
+    if (ret == -1)
+    {
+        LOG_ERROR("cannot set flags!\n");
+    }
+
+    if (!add_epoll_event(efd, client_fd, EPOLLET | EPOLLIN))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool Interface::add_server_socket(int socket)
+{
     struct epoll_event event;
     memset(&event, 0, sizeof(event));
 
-    // create server socket and set to non block
-    //int server_socket = create_and_bind_socket(port);
-    //set_socket_non_block(server_socket);
+    server_socket_ = socket;
 
-    int server_socket = socket;
-
-    int ret = listen(server_socket, SOMAXCONN);
+    int ret = listen(server_socket_, SOMAXCONN);
     if (ret == -1)
     {
         LOG_ERROR("cannot listen at the given server_socket!\n");
@@ -121,25 +198,28 @@ bool Interface::start(int socket)
         LOG_INFO("process %d listend on 9090 port success.", getpid());
     }
 
-    int epoll_fd = epoll_create(1);
-    if (epoll_fd == -1)
+    epoll_fd_ = epoll_create(1);
+    if (epoll_fd_ == -1)
     {
-        LOG_ERROR("cannot create epoll_fd!\n");
+        LOG_ERROR("cannot create epoll_fd_!\n");
         return false;
     }
 
-    event.events  = EPOLLIN | EPOLLOUT | EPOLLET;
-    event.data.fd = server_socket;
-    ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_socket, &event);
-    if (ret == -1)
+    if (!add_epoll_event(epoll_fd_, server_socket_, EPOLLIN | EPOLLOUT | EPOLLET))
     {
-        LOG_ERROR("can not add event to epoll_fd!\n");
         return false;
     }
+
+    return true;
+}
+
+void Interface::run()
+{
+    struct epoll_event events[MAX_EVENTS] = {0};
 
     while (1)
     {
-        int cnt = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        int cnt = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
 
         for (int i = 0; i < cnt; i++)
         {
@@ -151,73 +231,46 @@ bool Interface::start(int socket)
                 continue;
 
             }
-            else if (events[i].data.fd == server_socket)
+            else if (events[i].data.fd == server_socket_)
             {
-                struct sockaddr client_addr;
-                int addrlen = sizeof(struct sockaddr);
-
-                int client_fd = accept(server_socket, &client_addr, &addrlen);
-                if (client_fd == -1)
-                {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        LOG_ERROR("cannot accept new server_socket!\n");
-                        continue;
-                    }
-                }
-
-                ret = set_socket_non_block(client_fd);
-                if (ret == -1)
-                {
-                    LOG_ERROR("cannot set flags!\n");
-                    exit(1);
-                }
-
-                event.data.fd = client_fd;
-                event.events  = EPOLLET | EPOLLIN;
-                ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
-                if (ret == -1)
-                {
-                    LOG_ERROR("cannot add to epoll_fd!\n");
-                    continue;
-                }
+                accept_client(epoll_fd_, server_socket_);
             }
             else
             {
-                int cnt;
                 char buf[BUF_SIZE] = {0};
+                int result = 1;
+                int cnt = nio_recv(events[i].data.fd, buf, sizeof(protocol_head_t), &result);
+                if (result <= 0) continue;
+
+                //decode head
+                protocol_head_t proto_head;
+                protocol_head_codec_t head_codec;
+                head_codec.decode(buf, BUF_SIZE, &proto_head);
+
+                result = 1;
+                cnt = nio_recv(events[i].data.fd, buf + sizeof(protocol_head_t), proto_head.len_, &result);
+                if (result <= 0) continue;
+
+                if ((proto_head.type_ >= JSON_PROTOCOL_TYPE)
+                    && (proto_head.type_ <= BINARY_PROTOCOL_TYPE)
+                    && (codecs_[proto_head.type_] != NULL))
                 {
-                    memset(buf, 0, sizeof(buf));
-                    cnt = read(events[i].data.fd,  buf, BUF_SIZE);
-                    if (cnt == -1)
-                    {
-                        if (errno == EAGAIN)
-                        {
-                            break;
-                        }
+                    iEvent* ev  = codecs_[proto_head.type_]->decode(proto_head.msg_id_, buf + sizeof(protocol_head_t), proto_head.len_);
+                    iEvent* rsp = callback_(ev);
 
-                        LOG_ERROR("read error!\n");
-                        return false;
+                    // TODO : encode rsp event to
+                    // TODO : send response
 
-                    }
-                    else if (cnt == 0)
-                    {
-                        ::close(events[i].data.fd);
-                    }
-
-                    LOG_DEBUG("receive client data : %s\n", buf);
-                    nio_write(events[i].data.fd, buf, strlen(buf));
-                    break;
+                }
+                else
+                {
+                    LOG_ERROR("message (sn=%ld) type %d is error.", proto_head.msg_sn, proto_head.type_);
                 }
             }
         }
     }
 
-    return true;
+    return;
 }
 
 bool Interface::close()

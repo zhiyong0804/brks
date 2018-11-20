@@ -10,7 +10,7 @@ class protocol_codec_t
 {
 public:
     virtual bool encode(iEvent* ev, u8* buffer, u32 size) = 0;
-    virtual iEvent* decode(u8* buffer, u32 size) = 0;
+    virtual iEvent* decode(u16 mid, u8* buffer, u32 size) = 0;
 };
 
 #endif

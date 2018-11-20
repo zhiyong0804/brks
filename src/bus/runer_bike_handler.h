@@ -20,8 +20,8 @@ public:
 	virtual iEvent* handle(const iEvent* ev);
 
 private:
-    CommonRspEv* handle_unlock_req(UnlockEv* ev);
-    LockResultRspEv* handle_lock_req(LockEv* ev);
+    CommonRspEv* handle_unlock_req(UnlockReqEv* ev);
+    LockRspEv* handle_lock_req(LockReqEv* ev);
     ListTravelRecordsRspEv* handle_list_travel_records_req(ListTravelRecordsReqEv* ev);
 
 private:
