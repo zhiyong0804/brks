@@ -3,11 +3,27 @@
 #include "Logger.h"
 
 #include <json/json.h>
-
+#include <string.h>
 
 bool json_protocol_codec_t::encode(iEvent* ev, u8* buffer, u32 size)
 {
+    bool ret = false;
+    switch(ev->get_eid())
+    {
+        case EEVENTID_GET_MOBILE_CODE_RSP:
+        case EEVENTID_LOGIN_RSP:
+        case EEVENTID_RECHARGE_RSP:
+        case EEVENTID_UNLOCK_RSP:
+        case EEVENTID_LOCK_RSP:
+            ret = encode_common_rsp_ev(ev, buffer, size);
+            break;
 
+        case EEVENTID_GET_ACCOUNT_BALANCE_RSP:
+            ret = encode_get_account_balance_rsp_ev(ev, buffer, size);
+            break;
+    }
+
+    return ret;
 }
 
 iEvent* json_protocol_codec_t::decode(u16 mid, u8* buffer, u32 size)
@@ -141,6 +157,33 @@ ListTravelRecordsReqEv* json_protocol_codec_t::decode_2_list_travel_records_req_
     return new ListTravelRecordsReqEv(mobile);
 }
 
+bool json_protocol_codec_t::encode_common_rsp_ev(CommonRspEv* rsp, u8* buffer, u32 size)
+{
+    Json::Value attributes;
+    attributes["code"] = rsp->get_code();
+    attributes["msg"]  = rsp->get_msg();
+    attributes["data"] = rsp->get_data();
+    Json::FastWriter writer;
+    std::string body = writer.write(attributes);
+    memcpy(buffer, body.data(), body.size());
+
+    return true;
+}
+
+bool json_protocol_codec_t::encode_get_account_balance_rsp_ev(GetAccountBalanceRspEv* rsp, u8* buffer, u32 size)
+{
+    Json::Value attributes;
+    attributes["code"] = rsp->get_code();
+    attributes["msg"]  = rsp->get_msg();
+    attributes["data"] = rsp->get_data();
+    attributes["balance"] = rsp->get_balance();
+
+    Json::FastWriter writer;
+    std::string body = writer.write(attributes);
+    memcpy(buffer, body.data(), body.size());
+
+    return true;
+}
 
 
 

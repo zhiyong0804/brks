@@ -24,6 +24,10 @@ private:
     LockReqEv* decode_2_lock_req_ev(const Json::Value& attributes);
     ListAccountRecordsReqEv* decode_2_list_account_record_req_ev(const Json::Value& attributes);
     ListTravelRecordsReqEv* decode_2_list_travel_records_req_ev(const Json::Value& attributes);
+
+private:
+    virtual bool encode_common_rsp_ev(CommonRspEv* rsp, u8* buffer, u32 size);
+    virtual bool encode_get_account_balance_rsp_ev(GetAccountBalanceRspEv* rsp, u8* buffer, u32 size);
 };
 
 #endif

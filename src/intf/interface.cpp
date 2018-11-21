@@ -259,7 +259,8 @@ void Interface::run()
                     iEvent* rsp = callback_(ev);
 
                     // TODO : encode rsp event to
-                    // TODO : send response
+                    // TODO : send response,
+                    // nio_write
 
                 }
                 else
