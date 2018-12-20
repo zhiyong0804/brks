@@ -28,79 +28,19 @@
 #define BUF_SIZE   1024
 #define MAX_EVENTS 64
 
-int Interface::create_and_bind_socket(unsigned short port)
+Interface::Interface(std::function< iEvent* (const iEvent*)>  callback) : callback_(callback)
 {
-    int sfd;
-    sfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sfd < 0)
+    codecs_[JSON_PROTOCOL_TYPE]   = new json_protocol_codec_t;
+    codecs_[PB_PROTOCOL_TYPE]     = NULL;
+    codecs_[FB_PROTOCOL_TYPE]     = NULL;
+    codecs_[BINARY_PROTOCOL_TYPE] = NULL;
+
+    epoll_fd_ = epoll_create(1);
+    if (epoll_fd_ == -1)
     {
-        LOG_ERROR("create socket failed");
-        return -1;
+        LOG_ERROR("cannot create epoll_fd_!\n");
     }
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(struct sockaddr_in));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(sfd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) < 0)
-    {
-	    LOG_ERROR("bind to port = %d failed.", port);
-	    return -1;
-    }
-
-    // set SO_REUSEADDR
-    int opt = 1;
-    setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt, sizeof(opt));
-
-    return sfd;
-}
-
-int Interface::set_socket_non_block(int sfd)
-{
-    int flags, res;
-
-    flags = fcntl(sfd, F_GETFL);
-    if (flags == -1)
-    {
-        LOG_ERROR("cannot get socket flags!\n");
-        return -1;
-    }
-
-    flags |= O_NONBLOCK;
-    res    = fcntl(sfd, F_SETFL, flags);
-    if (res == -1)
-    {
-        LOG_ERROR("cannot set socket flags!\n");
-        return -1;
-    }
-
-    return 0;
-}
-
-int Interface::nio_write(int fd, char* buf, int len)
-{
-    int write_pos = 0;
-    int left_len = len;
-
-    while (left_len > 0)
-    {
-        int writed_len = 0;
-        if ((writed_len = write(fd, buf + write_pos, left_len)) <= 0)
-        {
-            if (errno == EAGAIN)
-            {
-               writed_len = 0;
-            }
-            else return -1; //表示写失�?
-        }
-        left_len -= writed_len;
-        write_pos += writed_len;
-    }
-
-    return len;
-}
+};
 
 bool Interface::add_epoll_event(int efd, int socket, int events)
 {
@@ -117,35 +57,6 @@ bool Interface::add_epoll_event(int efd, int socket, int events)
 
     return true;
 }
-
-int Interface::nio_recv(int sockfd, char *buffer, int length, int *ret)
-{
-	int idx = 0;
-
-	while (1)
-    {
-		int count = recv(sockfd, buffer+idx, length - idx, 0);
-		if (count == 0)
-        {
-			*ret = -1;
-			::close(sockfd);
-			break;
-		}
-        else if (count == -1)
-		{
-			*ret = 0;
-			break;
-		}
-        else
-        {
-			idx += count;
-			if (idx == length) break;
-		}
-	}
-
-	return idx;
-}
-
 
 bool Interface::accept_client(int efd, int sfd)
 {
@@ -180,11 +91,14 @@ bool Interface::accept_client(int efd, int sfd)
     return true;
 }
 
+bool Interface::add_channel_socket(brks_socket_t *fd)
+{
+    channel_fd_[0] = fd[0];
+    channel_fd_[1] = fd[1];
+}
+
 bool Interface::add_server_socket(int socket)
 {
-    struct epoll_event event;
-    memset(&event, 0, sizeof(event));
-
     server_socket_ = socket;
 
     int ret = listen(server_socket_, SOMAXCONN);
@@ -196,13 +110,6 @@ bool Interface::add_server_socket(int socket)
     else
     {
         LOG_INFO("process %d listend on 9090 port success.", getpid());
-    }
-
-    epoll_fd_ = epoll_create(1);
-    if (epoll_fd_ == -1)
-    {
-        LOG_ERROR("cannot create epoll_fd_!\n");
-        return false;
     }
 
     if (!add_epoll_event(epoll_fd_, server_socket_, EPOLLIN | EPOLLOUT | EPOLLET))

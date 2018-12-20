@@ -6,6 +6,10 @@
 #include "BusProcessor.h"
 #include "iniconfig.h"
 #include "configdef.h"
+#include "consistency_hash_cluster.h"
+#include "process.h"
+#include "brks_socket.h"
+
 
 #include <functional>
 #include <sys/types.h>
@@ -26,6 +30,11 @@ int optreset = 0;
 int optind = 1;
 int opterr = 1;
 int optopt;
+
+Interface* brks_intf = NULL;
+extern u32 brks_last_process;
+extern u32 brks_current_slot;
+extern brks_process_t brks_processes[BRKS_MAX_PROCESS_NUM];
 
 static int brks_fprintf(FILE *file, const char *fmt,  ...)
 {
@@ -193,6 +202,9 @@ int main(int argc, char** argv)
     bool run_in_foreground = false;
     std::string log_file_path = "";
     std::string config_file_path = "";
+
+    consistency_hash_cluster_t process_hash;
+
     while ((ch = getopt(argc,argv, "vdl:c:")) != EOF)
     {
         switch(ch)
@@ -253,27 +265,28 @@ int main(int argc, char** argv)
 
     std::function< iEvent* (const iEvent*)> fun = std::bind(&DispatchMsgService::process, dms.get(), std::placeholders::_1);
 
-    // create server socket and set to non block
-    Interface intf(fun);
-    int server_socket = intf.create_and_bind_socket(conf_args.svr_port);
-    intf.set_socket_non_block(server_socket);
+    brks_intf = new Interface(fun);
+    brks_socket_t server_socket = create_and_bind_socket(conf_args.svr_port);  // 9090 port
+    set_socket_non_block(server_socket);
 
     //fork multi process
-    pid_t processid = 0;
-    for(int i = 0; i < 4; i++)
+    brks_pid_t processid = 0;
+    brks_last_process = 0;
+    brks_channel_t channel;
+    channel.command = BRKS_CMD_OPEN_CHANNEL;
+    for (i32 i = 0; i < 4; i++)
     {
-        processid = 0;
-        processid = fork();
-        if(processid < 0)
-        {
-            LOG_ERROR("fork child task failed.");
-            break;
-        }
-        else if (processid == 0)  // this is child task
-        {
-            break;
-        }
+        processid = brks_spawn_process("worker", brks_worker_process_cycle);
+
+        channel.pid  = processid;
+        channel.len  = 0;
+        channel.slot = brks_current_slot;
+        channel.fd   = brks_processes[brks_current_slot].channel[0];
+        brks_pass_open_channel(&channel);
     }
+
+    /* all worker start to service, that meams worker add all service socket to epoll */
+    brks_start_all_worker_service();
 
     if (processid > 0) // this is parent process
     {
@@ -299,28 +312,17 @@ int main(int argc, char** argv)
                 else
                 {
                     processid = fork();  // restart an child process.
-                    if (processid == 0) break;  // break while.
+                    if (processid == 0) break;  //child process jump out here.
                 }
             }
 
             if (WIFSIGNALED(status)) // child exited on an unhandled signal (maybe a bus error or seg fault)
 			{
 				processid = fork();  // restart an child process.
-                if (processid == 0) break;  // break while.
+                if (processid == 0) break;  //child process jump out here.
 			}
-        }
-    }
 
-    if (processid == 0)
-    {
-        LOG_INFO("this is child process pid=%d", getpid());
-        if (!intf.add_server_socket(server_socket))
-        {
-            LOG_ERROR("cannot start child process!");
-            exit(-1); // if cannot start child process donnot restart server.
         }
-        intf.run();
-        LOG_ERROR("child process exit");
     }
 
     for(;;);

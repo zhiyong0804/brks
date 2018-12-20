@@ -106,7 +106,7 @@ iEvent* DispatchMsgService::process(const iEvent* ev)
         rsp = handler->handle(ev);
     }
 
-	  return rsp;
+	return rsp;
 }
 
 void* DispatchMsgService::svc(void* argv)

@@ -6,38 +6,30 @@
 #include "protocol_head.h"
 #include "protocol_codec.h"
 #include "json_protocol_codec.h"
+#include "brks_socket.h"
 
 class Interface
 {
 public:
-    Interface(std::function< iEvent* (const iEvent*)>  callback) : callback_(callback)
-    {
-        codecs_[JSON_PROTOCOL_TYPE]   = new json_protocol_codec_t;
-        codecs_[PB_PROTOCOL_TYPE]     = NULL;
-        codecs_[FB_PROTOCOL_TYPE]     = NULL;
-        codecs_[BINARY_PROTOCOL_TYPE] = NULL;
-    };
+    Interface(std::function< iEvent* (const iEvent*)>  callback);
 
-    bool add_server_socket(int socket);
+    bool add_server_socket(brks_socket_t socket);
+    bool add_channel_socket(brks_socket_t *fd);
     bool close();
     void run();
 
-    int create_and_bind_socket(unsigned short port);
-    int set_socket_non_block(int sfd);
-
 private:
     std::function< iEvent* (const iEvent*)> callback_;
-    int server_socket_;
-    int epoll_fd_;
+    brks_socket_t server_socket_;
+    brks_socket_t epoll_fd_;
+    brks_socket_t channel_fd_[2];
 
     protocol_codec_t* codecs_[4]; // there is only 4 protocol codec.
 
 private:
-    bool add_epoll_event(int efd, int socket, int events);
-    bool accept_client(int efd, int sfd);
-    unsigned int read_client_data(int fd, char* buffer, int size);
-    int nio_recv(int sockfd, char *buffer, int length, int *ret);
-    int nio_write(int fd, char* buf, int len);
+    bool add_epoll_event(brks_socket_t efd, brks_socket_t socket, int events);
+    bool accept_client(brks_socket_t efd, brks_socket_t sfd);
+    unsigned int read_client_data(brks_socket_t fd, char* buffer, int size);
 };
 
 #endif

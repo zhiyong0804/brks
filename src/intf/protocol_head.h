@@ -33,8 +33,9 @@ struct protocol_head_t
     u8         type_;       // content type
     u16        len_;        // content length
     u16        msg_id_;     // message id
-    u64        msg_sn;     // message serise number
+    u64        msg_sn;      // message serise number
     u32        reserve_;    // reserve bytes
+//    i8[0]      content;
 };
 #pragma pack()
 

@@ -10,6 +10,9 @@ extern "C" {
 #define TRUE    1
 #define FALSE   0
 
+#define  RET_OK          0
+#define  RET_ERROR      -1
+
 #define INVALID_U32  0xFFFF
 
 /* Global type defintions */
