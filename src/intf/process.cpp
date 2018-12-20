@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 
 int     brks_argc;
@@ -79,7 +80,12 @@ brks_pid_t brks_spawn_process(char *name, brks_spawn_proc_pt proc)
     brks_processes[s].name            = name;
     brks_processes[s].max_connections = BRKS_MAX_CONNECTION_NUM;
 
-    brks_last_process ++;
+    /*
+     * if there is an empty slot between 0 and brks_last_process,
+     * brks_last_process should not increase
+     */
+    if (s >= brks_last_process)
+        brks_last_process ++;
 
     return pid;
 }
@@ -150,4 +156,74 @@ i32  brks_start_all_worker_service()
     return RET_OK;
 }
 
+i32  brks_start_single_worker_service(u32 slot)
+{
+    brks_channel_t ch;
+    ch.command = BRKS_CMD_SERVICE;
+    ch.slot    = slot;
+    ch.pid     = brks_processes[slot].pid;
+    ch.fd      = brks_processes[slot].channel[0];
+
+    LOG_INFO("pass channel s:%i pid:%P fd:%d to s:%i pid:%P fd:%d",
+              ch.slot, ch.pid, ch.fd,
+              slot, brks_processes[slot].pid,
+              brks_processes[slot].channel[0]);
+
+    if (RET_OK != brks_write_channel(brks_processes[slot].channel[0], &ch, CHANNEL_WITHOUT_SPECIAl_SIZE))
+    {
+        LOG_ERROR("write channel failed with channel[pid=%d]", ch.pid);
+        return RET_ERROR;
+    }
+
+    return RET_OK;
+}
+
+void brks_master_process_cycle()
+{
+    pid_t processid;
+    LOG_INFO("parent id is %d", getpid());
+    LOG_INFO("brks start successful!");
+
+    // if child process exit with -1 then exit parent process.
+    // if child process exit with not -1 then restart child process
+    int status = 0;
+    while (status == 0)
+    {
+        pid_t pid = wait(&status);  // parent process block here.
+        int exitStatus = WEXITSTATUS(status);
+        LOG_INFO("parent process wait return with: pid=%d, status=%d, exitStatus=%d.", pid, status, exitStatus);
+
+        if ((WIFEXITED(status) != 0) && (pid > 0))
+        {
+            if (exitStatus == -1)
+            {
+                LOG_ERROR("child process %d cannot normal start so parent should be exit too.", pid);
+                exit(-1);
+            }
+            else
+            {
+                processid = fork();  // restart an child process.
+                if (processid == 0) break;  //child process jump out here.
+            }
+        }
+
+        if (WIFSIGNALED(status)) // child exited on an unhandled signal (maybe a bus error or seg fault)
+        {
+            processid = fork();  // restart an child process.
+            if (processid == 0) break;  //child process jump out here.
+        }
+
+fork_worker :
+        processid = brks_spawn_process("worker", brks_worker_process_cycle);
+        LOG_INFO("fork annother worker %d", processid);
+        brks_channel_t channel;
+        channel.command = BRKS_CMD_OPEN_CHANNEL;
+        channel.pid     = processid;
+        channel.len     = 0;
+        channel.slot    = brks_current_slot;
+        channel.fd      = brks_processes[brks_current_slot].channel[0];
+        brks_pass_open_channel(&channel);
+        brks_start_single_worker_service(brks_current_slot);
+    }
+}
 

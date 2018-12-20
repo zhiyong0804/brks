@@ -274,6 +274,9 @@ int main(int argc, char** argv)
     brks_last_process = 0;
     brks_channel_t channel;
     channel.command = BRKS_CMD_OPEN_CHANNEL;
+    /*
+     * TODO : 4 is magic number, we need to config by conf file.
+     */
     for (i32 i = 0; i < 4; i++)
     {
         processid = brks_spawn_process("worker", brks_worker_process_cycle);
@@ -285,45 +288,14 @@ int main(int argc, char** argv)
         brks_pass_open_channel(&channel);
     }
 
+    /*
+     * TODO : set worker cpu affinity and priority.
+     */
+
     /* all worker start to service, that meams worker add all service socket to epoll */
     brks_start_all_worker_service();
 
-    if (processid > 0) // this is parent process
-    {
-        LOG_INFO("parent id is %d", getpid());
-        LOG_INFO("brks start successful!");
-
-        // if child process exit with -1 then exit parent process.
-        // if child process exit with not -1 then restart child process
-        int status = 0;
-        while (status == 0)
-        {
-            pid_t pid = wait(&status);  // parent process block here.
-            int exitStatus = WEXITSTATUS(status);
-            LOG_INFO("parent process wait return with: pid=%d, status=%d, exitStatus=%d.", pid, status, exitStatus);
-
-            if ((WIFEXITED(status) != 0) && (pid > 0))
-            {
-                if (exitStatus == -1)
-                {
-                    LOG_ERROR("child process %d cannot normal start so parent should be exit too.", pid);
-                    exit(-1);
-                }
-                else
-                {
-                    processid = fork();  // restart an child process.
-                    if (processid == 0) break;  //child process jump out here.
-                }
-            }
-
-            if (WIFSIGNALED(status)) // child exited on an unhandled signal (maybe a bus error or seg fault)
-			{
-				processid = fork();  // restart an child process.
-                if (processid == 0) break;  //child process jump out here.
-			}
-
-        }
-    }
+    brks_master_process_cycle();
 
     for(;;);
 

@@ -30,7 +30,10 @@ typedef struct {
 brks_pid_t brks_spawn_process(char *name, brks_spawn_proc_pt proc);
 void brks_worker_process_cycle(u32 slot);
 i32  brks_start_all_worker_service();
+i32  brks_start_single_worker_service(u32 slot);
 void brks_pass_open_channel(brks_channel_t* ch);
+void brks_master_process_cycle();
+
 
 #endif
 
