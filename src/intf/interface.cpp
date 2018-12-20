@@ -95,13 +95,18 @@ bool Interface::add_channel_socket(brks_socket_t *fd)
 {
     channel_fd_[0] = fd[0];
     channel_fd_[1] = fd[1];
+
+    if (!add_epoll_event(epoll_fd_, channel_fd_[1], EPOLLET | EPOLLIN))
+    {
+        return false;
+    }
+
+    return true;
 }
 
-bool Interface::add_server_socket(int socket)
+bool Interface::add_server_socket(brks_socket_t socket)
 {
-    server_socket_ = socket;
-
-    int ret = listen(server_socket_, SOMAXCONN);
+    int ret = listen(socket, SOMAXCONN);
     if (ret == -1)
     {
         LOG_ERROR("cannot listen at the given server_socket!\n");
@@ -112,10 +117,10 @@ bool Interface::add_server_socket(int socket)
         LOG_INFO("process %d listend on 9090 port success.", getpid());
     }
 
-    if (!add_epoll_event(epoll_fd_, server_socket_, EPOLLIN | EPOLLOUT | EPOLLET))
-    {
-        return false;
-    }
+    /* just only add to server_sockets_, when recived BRKS_CMD_SERVICE command
+     * add every socket to epoll
+     */
+    server_sockets_.push_back(socket);
 
     return true;
 }
@@ -138,9 +143,10 @@ void Interface::run()
                 continue;
 
             }
-            else if (events[i].data.fd == server_socket_)
+            else if ((events[i].data.fd == server_sockets_[0])
+                || (events[i].data.fd == server_sockets_[1]) )
             {
-                accept_client(epoll_fd_, server_socket_);
+                accept_client(epoll_fd_, events[i].data.fd);
             }
             else
             {

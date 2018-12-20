@@ -2,6 +2,7 @@
 #define BRKS_INTF_INTERFACE_H_
 
 #include <functional>
+#include <vector>
 
 #include "protocol_head.h"
 #include "protocol_codec.h"
@@ -19,10 +20,10 @@ public:
     void run();
 
 private:
-    std::function< iEvent* (const iEvent*)> callback_;
-    brks_socket_t server_socket_;
-    brks_socket_t epoll_fd_;
-    brks_socket_t channel_fd_[2];
+    std::function< iEvent* (const iEvent*)>  callback_;
+    std::vector<brks_socket_t> server_sockets_;
+    brks_socket_t  epoll_fd_;
+    brks_socket_t  channel_fd_[2];
 
     protocol_codec_t* codecs_[4]; // there is only 4 protocol codec.
 

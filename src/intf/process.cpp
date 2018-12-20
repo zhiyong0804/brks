@@ -87,6 +87,11 @@ brks_pid_t brks_spawn_process(char *name, brks_spawn_proc_pt proc)
 void brks_worker_process_cycle(u32 slot)
 {
     LOG_INFO("this is child process pid=%d", getpid());
+
+    /*
+     * when entry worker process, first of all, add channel socket to interface.
+     */
+    brks_intf->add_channel_socket(brks_processes[slot].channel);
     brks_intf->run();
     LOG_ERROR("child process %d exit", getpid());
 }
