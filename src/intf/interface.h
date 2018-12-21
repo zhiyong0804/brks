@@ -28,6 +28,8 @@ private:
     protocol_codec_t* codecs_[4]; // there is only 4 protocol codec.
 
 private:
+    bool handle_channel_event();
+
     bool add_epoll_event(brks_socket_t efd, brks_socket_t socket, int events);
     bool accept_client(brks_socket_t efd, brks_socket_t sfd);
     unsigned int read_client_data(brks_socket_t fd, char* buffer, int size);

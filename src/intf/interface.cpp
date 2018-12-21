@@ -148,6 +148,11 @@ void Interface::run()
             {
                 accept_client(epoll_fd_, events[i].data.fd);
             }
+            else if (events[i].data.fd == channel_fd_[1])
+            {
+                // TODO : handle all the channel events
+
+            }
             else
             {
                 char buf[BUF_SIZE] = {0};

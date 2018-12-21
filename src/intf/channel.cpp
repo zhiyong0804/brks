@@ -16,22 +16,24 @@ i32 brks_write_channel(brks_socket_t s, brks_channel_t *ch, size_t size)
 
     union {
         struct cmsghdr  cm;
-        char            space[CMSG_SPACE(sizeof(i32))];
+        char            space[CMSG_SPACE(sizeof ch->data)];
     } cmsg;
 
-    if (ch->fd == -1) {
+    if (ch->len == 0) {
         msg.msg_control    = NULL;
         msg.msg_controllen = 0;
 
     } else {
-        msg.msg_control    = (caddr_t) &cmsg;
-        msg.msg_controllen = sizeof(cmsg);
+        msg.msg_control    = (caddr_t) &cmsg.space;
+        msg.msg_controllen = ch->len;
 
         memset(&cmsg, 0, sizeof(cmsg));
-
-        cmsg.cm.cmsg_len   = CMSG_LEN(sizeof(int));
+        cmsg.cm.cmsg_len   = CMSG_LEN(ch->len);
         cmsg.cm.cmsg_level = SOL_SOCKET;
-        cmsg.cm.cmsg_type  = SCM_RIGHTS;
+        if ((ch->command == BRKS_CMD_OPEN_CHANNEL) || (ch->command == BRKS_CMD_MOVEFD))
+        {
+            cmsg.cm.cmsg_type  = SCM_RIGHTS;
+        }
 
         /*
          * We have to use ngx_memcpy() instead of simple
@@ -42,14 +44,13 @@ i32 brks_write_channel(brks_socket_t s, brks_channel_t *ch, size_t size)
          * Fortunately, gcc with -O1 compiles this ngx_memcpy()
          * in the same simple assignment as in the code above
          */
-
-        memcpy(CMSG_DATA(&cmsg.cm), &ch->fd, sizeof(i32));
+        memcpy(CMSG_DATA(&cmsg.cm), &ch->data, ch->len);
     }
 
     msg.msg_flags = 0;
 
     iov[0].iov_base = (char *) ch;
-    iov[0].iov_len = size;
+    iov[0].iov_len  = size;
 
     msg.msg_name    = NULL;
     msg.msg_namelen = 0;
@@ -80,19 +81,19 @@ i32 brks_read_channel(brks_socket_t s, brks_channel_t *ch, size_t size)
 
     union {
         struct cmsghdr  cm;
-        char            space[CMSG_SPACE(sizeof(i32))];
+        char            space[CMSG_SPACE(sizeof ch->data)];
     } cmsg;
 
     iov[0].iov_base = (char *) ch;
-    iov[0].iov_len = size;
+    iov[0].iov_len  = size;
 
-    msg.msg_name = NULL;
+    msg.msg_name    = NULL;
     msg.msg_namelen = 0;
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
+    msg.msg_iov     = iov;
+    msg.msg_iovlen  = 1;
 
-    msg.msg_control = (caddr_t) &cmsg;
-    msg.msg_controllen = sizeof(cmsg);
+    msg.msg_control    = (caddr_t) &cmsg.space;
+    msg.msg_controllen = sizeof(ch->data);
 
     n = recvmsg(s, &msg, 0);
 
@@ -111,7 +112,7 @@ i32 brks_read_channel(brks_socket_t s, brks_channel_t *ch, size_t size)
         return RET_ERROR;
     }
 
-    if (ch->command == BRKS_CMD_OPEN_CHANNEL)
+    if ((ch->command == BRKS_CMD_OPEN_CHANNEL) || (ch->command == BRKS_CMD_MOVEFD))
     {
         if (cmsg.cm.cmsg_len < (socklen_t) CMSG_LEN(sizeof(int))) {
             LOG_ERROR("recvmsg() returned too small ancillary data");
@@ -126,8 +127,7 @@ i32 brks_read_channel(brks_socket_t s, brks_channel_t *ch, size_t size)
             return RET_ERROR;
         }
 
-        /* ch->fd = *(int *) CMSG_DATA(&cmsg.cm); */
-        memcpy(&ch->fd, CMSG_DATA(&cmsg.cm), sizeof(int));
+        memcpy(&ch->fd, CMSG_DATA(&cmsg.space), cmsg.cm.cmsg_len);
     }
 
     if (msg.msg_flags & (MSG_TRUNC|MSG_CTRUNC)) {

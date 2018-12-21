@@ -15,6 +15,7 @@
 #define BRKS_CMD_TERMINATE      4
 #define BRKS_CMD_REOPEN         5
 #define BRKS_CMD_SERVICE        6
+#define BRKS_CMD_MOVEFD         7
 
 typedef struct {
     u32              command;  /* ÃüÁî×Ö */
