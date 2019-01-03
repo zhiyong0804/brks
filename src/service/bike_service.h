@@ -60,7 +60,8 @@ public:
     bool report_damage(int devno, int trouble, const std::string& tmsg);
 
     bool get_bike(int devno, Bike& bk);
-    bool lock(Bike& bk);
+    //bool lock(Bike& bk);
+    bool lock(const std::string& mobile, int bike_code_num, TravelInfo& travel);
     bool unlock(Bike& bk);
 
     bool insert_travel_record(const std::string& mobile, int type, double mileage,
@@ -71,6 +72,7 @@ public:
     bool get_current_stmp(u64& stmp);
 private:
     std::shared_ptr<MysqlConnection> sql_conn_;
+    inline std::string format(const char* fmt, ...);
 };
 
 #endif

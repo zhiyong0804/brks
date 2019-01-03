@@ -92,6 +92,37 @@ bool MysqlConnection::Execute(const char* szSql, SqlRecordSet& recordSet)
     return true;
 }
 
+bool MysqlConnection::transaction(std::list<std::string> sqls)
+{
+    i32 OFF = 0;
+    int ret = 0;
+    mysql_autocommit(mysql_, OFF);
+    mysql_query(mysql_, "start transaction");
+    for(std::list<std::string>::const_iterator iter = sqls.begin(); iter != sqls.end(); iter++)
+    {
+        ret = mysql_query(mysql_, (*iter).c_str());
+        if (ret != 0)
+        {
+            break;
+        }
+    }
+
+    if (ret != 0)
+    {
+        mysql_query(mysql_, "rollback");
+        LOG_ERROR("excute transaction failed.");
+        return false;
+    }
+
+    if(0 != mysql_query(mysql_, "commit"))
+    {
+        LOG_ERROR("commit transaction failed.");
+        return false;
+    }
+
+    return true;
+}
+
 int MysqlConnection::EscapeString(const char* pSrc, int nSrcLen, char* pDest)
 {
 	if (!mysql_)
@@ -135,3 +166,4 @@ void MysqlConnection::Reconnect()
 }
 
 //////////////////////////////////MySqlConnection END/////////////////////////////
+

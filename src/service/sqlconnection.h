@@ -3,6 +3,7 @@
 
 #include <mysql/mysql.h>
 #include <string>
+#include <list>
 #include <mysql/errmsg.h>
 #include <assert.h>
 
@@ -33,7 +34,7 @@ public:
 	inline void SetResult(MYSQL_RES* pRes)
 	{
 		assert(m_pRes == NULL);		// 如果此时已经保存了结果集了，那么应该让程序报错，防止内存泄露
-		if (m_pRes)					
+		if (m_pRes)
 		{
 			LOG_WARN("the MYSQL_RES has already stored result, maybe will cause memory leak");
 		}
@@ -47,7 +48,7 @@ public:
 	{
 		row = mysql_fetch_row(m_pRes);
 	}
-    
+
     inline i32 GetRowCount()
     {
         return m_pRes->row_count;
@@ -68,6 +69,7 @@ public:
 	bool Init(const char* szHost, int nPort, const char* szUser, const char* szPasswd, const char* szDb);
 	bool Execute(const char* szSql);
 	bool Execute(const char* szSql, SqlRecordSet& recordSet);
+	bool transaction(std::list<std::string> sqls);
 	int EscapeString(const char* pSrc, int nSrcLen, char* pDest);
 	int EscapeString(const std::string& strSrc, std::string& strDest);
 	void Close();

@@ -18,15 +18,18 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "channel.h"
 
 #include "protocol_head.h"
 #include "events_def.h"
 #include "protocol_codec.h"
-
+#include "process.h"
 
 
 #define BUF_SIZE   1024
 #define MAX_EVENTS 64
+extern brks_process_t brks_processes[BRKS_MAX_PROCESS_NUM];
+
 
 Interface::Interface(std::function< iEvent* (const iEvent*)>  callback) : callback_(callback)
 {
@@ -151,7 +154,10 @@ void Interface::run()
             else if (events[i].data.fd == channel_fd_[1])
             {
                 // TODO : handle all the channel events
-
+                brks_channel_t ch;
+                memset(&ch, 0, sizeof(ch));
+                brks_read_channel(events[i].data.fd, &ch, CHANNEL_WITHOUT_SPECIAl_SIZE);
+                handle_channel_event(&ch);
             }
             else
             {
@@ -197,3 +203,48 @@ bool Interface::close()
 
     return true;
 }
+
+bool Interface::handle_channel_event(brks_channel_t* ch)
+{
+    bool ret = true;
+
+    switch(ch->command)
+    {
+    case BRKS_CMD_OPEN_CHANNEL:
+        brks_processes[ch->slot].pid = ch->pid;
+        brks_processes[ch->slot].channel[0] = ch->fd;
+        break;
+    case BRKS_CMD_CLOSE_CHANNEL:
+        break;
+    case BRKS_CMD_SERVICE:
+        for (i32 i = 0; i < server_sockets_.size(); i ++)
+        {
+            if (!add_epoll_event(epoll_fd_, server_sockets_[i], EPOLLIN))
+            {
+                ret = false;
+                LOG_ERROR("add socket %d to epoll failed.", server_sockets_[i]);
+            }
+        }
+        break;
+    case BRKS_CMD_MOVEFD:
+        if (!add_epoll_event(epoll_fd_, ch->fd, EPOLLIN))
+        {
+            ret = false;
+            LOG_ERROR("add socket %d to epoll failed.", ch->fd);
+        }
+        else
+        {
+            ;
+        }
+        break;
+    case BRKS_CMD_QUIT:
+        /*
+         * how to graceful quit,
+         */
+        break;
+    }
+
+    return true;
+}
+
+

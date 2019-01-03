@@ -8,6 +8,7 @@
 #include "protocol_codec.h"
 #include "json_protocol_codec.h"
 #include "brks_socket.h"
+#include "channel.h"
 
 class Interface
 {
@@ -26,9 +27,10 @@ private:
     brks_socket_t  channel_fd_[2];
 
     protocol_codec_t* codecs_[4]; // there is only 4 protocol codec.
+    std::map<std::string, brks_socket_t> bike_clients_;
 
 private:
-    bool handle_channel_event();
+    bool handle_channel_event(brks_channel_t* ch);
 
     bool add_epoll_event(brks_socket_t efd, brks_socket_t socket, int events);
     bool accept_client(brks_socket_t efd, brks_socket_t sfd);

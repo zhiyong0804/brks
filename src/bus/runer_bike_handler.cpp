@@ -96,46 +96,14 @@ LockRspEv* RunnerEventHandler::handle_lock_req(LockReqEv* ev)
     int bike_code_num = atoi(bike_code.c_str());
 
     BikeService bs(sqlconn_);
-    Bike bk(bike_code_num, mobile);
-    if (bs.get_bike(bike_code_num, bk))
+    TravelInfo travel;
+    if (bs.lock(mobile, bike_code_num, travel))
     {
-        u64 sstmp = bk.unlock_tm_;
-        u64 estmp = 0;
-        bs.get_current_stmp(estmp);
-
-        LOG_DEBUG("get current stmp = %lld and sstmp=%lld.", estmp, sstmp);
-
-        // ¼ÆËãÀï³Ì¡¢ÅÅ·Å¡¢¿¨Â·Àï£¬30¹«ÀïÃ¿Ğ¡Ê±
-        double hour = ((double)(estmp - sstmp)) /3600;
-        double mileage   = hour * 30; //* 8.34; // 30¹«ÀïÃ¿Ğ¡Ê±ÒâÎª8.34Ã×
-        double discharge = mileage * 2; // ÒÔ2kg/km¼ÆËãµÄ
-        double calorie   = hour * 469; //Æï×ÔĞĞ³µÒÔ469¿¨Â·Àï/60·ÖÖÓ¼ÆËãµÄ
-        std::vector<TravelRecord> record;
-        record.push_back(TravelRecord(sstmp, (estmp - sstmp)/60, 1));   // Ê±³¤Îª·ÖÖÓ, Ã¿´ÎÒ»¿éÇ®
-        TravelInfo trave(mileage, discharge, calorie, record);
-
-        LOG_DEBUG("user (%s) travel : mileage=%.2f, discharge=%.2f, calorie=%.2f", mobile.c_str(), mileage, discharge, calorie);
-
-        if (bk.mobile_.compare(mobile) != 0)
-        {
-            return new LockRspEv(ERRO_BIKE_IS_TOOK, "annother one take the bike.", "", trave);
-        }
-        else if (bk.st_ == BIKE_ST_UNLOCK)
-        {
-            /* Í¬Ê±¶Ô¶à¸ö±í¸ñ²Ù×÷£¬´Ë´¦ÕâÃ´Ğ´ÓĞÊ²Ã´ÎÊÌâå ÈçºÎ±£ÕÏÊı¾İµÄÒ»ÖÂĞÔ¿ */
-            if (!bs.lock(bk))
-            {
-                return new LockRspEv(ERRO_PROCCESS_FAILED, "failed", "", trave);
-            }
-            else
-            {
-                bs.insert_travel_record(bk.mobile_, bk.type_, mileage, discharge, calorie, sstmp, (estmp - sstmp)/60, 1);
-                // TODO ¿ÛÇ®
-
-            }
-        }
-
-        return new LockRspEv(ERRC_SUCCESS, "success", "", trave);
+        return new LockRspEv(ERRC_SUCCESS, "success", "", travel);
+    }
+    else
+    {
+        return new LockRspEv(ERRO_PROCCESS_FAILED, "lock bike failed", "", travel);
     }
 
     std::vector<TravelRecord> record;

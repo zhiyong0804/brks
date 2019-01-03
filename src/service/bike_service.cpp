@@ -1,6 +1,8 @@
 
 #include "bike_service.h"
 #include <time.h>
+#include <string>
+#include <cstdarg>
 
 
 Bike::Bike(int devno, const std::string& mobile) :
@@ -111,20 +113,82 @@ bool BikeService::report_damage(int devno, int trouble, const std::string& tmsg)
     return true;
 }
 
-bool BikeService::lock(Bike& bk)//int devno, const std::string& mobile)
+bool BikeService::lock(const std::string& mobile, int bike_code_num, TravelInfo& travel)//int devno, const std::string& mobile)
 {
-    char sql_content[1024] = {0};
-    sprintf(sql_content, \
-        "update bikeinfo set status = %d, mobile = \"%s\" where devno=%d and status = %d", \
-        BIKE_ST_LOCK, bk.mobile_.c_str(), bk.devno_, BIKE_ST_UNLOCK);
-
-    if (!sql_conn_->Execute(sql_content))
+    Bike bk(bike_code_num, mobile);
+    bool ret = false;
+    if (get_bike(bike_code_num, bk))
     {
-        LOG_ERROR("excute sql '%s' failed.", sql_content);
-        return false;
+        u64 sstmp = bk.unlock_tm_;
+        u64 estmp = 0;
+        get_current_stmp(estmp);
+
+        LOG_DEBUG("get current stmp = %lld and sstmp=%lld.", estmp, sstmp);
+
+        // 计算里程、排放、卡路里，30公里每小时
+        double hour = ((double)(estmp - sstmp)) /3600;
+        double mileage   = hour * 30; //* 8.34; // 30公里每小时意为8.34米
+        double discharge = mileage * 2; // 以2kg/km计算的
+        double calorie   = hour * 469; //骑自行车以469卡路里/60分钟计算的
+        std::vector<TravelRecord> record;
+        record.push_back(TravelRecord(sstmp, (estmp - sstmp)/60, 1));   // 时长为分钟, 每次一块钱
+        TravelInfo trave(mileage, discharge, calorie, record);
+        travel = trave;
+
+        LOG_DEBUG("user (%s) travel : mileage=%.2f, discharge=%.2f, calorie=%.2f", mobile.c_str(), mileage, discharge, calorie);
+
+        if (bk.mobile_.compare(mobile) != 0)
+        {
+            return false;
+        }
+
+        std::string sql[3];
+        sql[0] = format("update bikeinfo set status = %d, mobile = \"%s\" where devno=%d and status = %d", \
+            BIKE_ST_LOCK, bk.mobile_.c_str(), bk.devno_, BIKE_ST_UNLOCK);
+
+        sql[1] = format("insert into travelinfo (mobile, type, mileage, discharge, calorie, stmp, duration, amount) " \
+            "values (\"%s\", %d, %.2f, %.2f, %.2f, %lld, %d, %d)", \
+            mobile.c_str(), bk.type_, mileage, discharge, calorie, sstmp, (estmp - sstmp)/60, 1);
+
+        sql[2] = format("update userinfo set money = money - 1 where mobile = %s", mobile.c_str());
+
+        std::list<std::string> sqls;
+        sqls.push_back(sql[0]);
+        sqls.push_back(sql[1]);
+        sqls.push_back(sql[2]);
+
+        ret = sql_conn_->transaction(sqls);
+        if (!ret)
+        {
+            LOG_ERROR("excute sql failed : %s", sql[0].c_str());
+            LOG_ERROR("excute sql failed : %s", sql[1].c_str());
+            LOG_ERROR("excute sql failed : %s", sql[2].c_str());
+        }
     }
 
-    return true;
+    return ret;
+}
+
+inline std::string BikeService::format(const char* fmt, ...)
+{
+    int size = 512;
+    char* buffer = 0;
+    buffer = new char[size];
+    va_list vl;
+    va_start(vl, fmt);
+    int nsize = vsnprintf(buffer, size, fmt, vl);
+    if(size <= nsize)
+    {
+        //fail delete buffer and try again
+        delete[] buffer;
+        buffer = 0;
+        buffer = new char[nsize+1]; //+1 for /0
+        nsize = vsnprintf(buffer, size, fmt, vl);
+    }
+    std::string ret(buffer);
+    va_end(vl);
+    delete[] buffer;
+    return ret;
 }
 
 bool BikeService::unlock(Bike& bk)//int devno, const std::string& mobile)
