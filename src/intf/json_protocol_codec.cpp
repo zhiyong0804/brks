@@ -46,10 +46,28 @@ iEvent* json_protocol_codec_t::decode(u16 mid, u8* buffer, u32 size)
     case EEVENTID_RECHARGE_REQ:
 
         break;
+    case EEVENTID_LOCK_REQ:
+        ev = decode_2_lock_req_ev(attributes);
+        break;
     default:
         LOG_WARN("mid %d is invalid.", mid);
         break;
     }
+
+    return ev;
+}
+
+LockReqEv* json_protocol_codec_t::decode_2_lock_req_ev(const Json::Value& attributes)
+{
+    if (attributes["mobile"] == Json::nullValue || attributes["bikecode"] == Json::nullValue)
+    {
+        return NULL;
+    }
+
+    std::string mobile = attributes["mobile"].asString();
+    std::string bikecode = attributes["bikecode"].asString();
+
+    LockReqEv* ev = new LockReqEv(mobile,bikecode);
 
     return ev;
 }
